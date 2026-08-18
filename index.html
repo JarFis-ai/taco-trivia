@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jacobus Barnard — Taco Trivia | Case study</title>
+<meta name="description" content="Taco Trivia is a projector-first classroom quiz platform for ESL teachers: one teacher, one screen, no student devices. Case study, screenshots and the engineering behind it.">
+<meta name="color-scheme" content="light">
+<meta property="og:title" content="Taco Trivia — a projector-first classroom quiz platform">
+<meta property="og:description" content="One teacher, one screen, zero student devices. 10 games, 368 questions, built and deployed by one developer.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#fff6e2; --paper:#fffdf8; --band:#fff0c9;
+  --ink:#17161a; --muted:#57525c;
+  --cyan:#00d9e8; --green:#4ee83c; --purple:#a06bff;
+  --orange:#ff8a00; --blue:#4d9dff; --pink:#ff5470; --yellow:#ffe600;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--cream);color:var(--ink);font-family:Inter,system-ui,sans-serif;
+  line-height:1.65;font-size:17px;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+a{color:inherit}
+a:focus-visible,button:focus-visible{outline:3px solid var(--ink);outline-offset:3px;border-radius:4px}
+::selection{background:var(--yellow);color:var(--ink)}
+code{font-family:'JetBrains Mono',monospace;font-size:.86em;background:var(--band);
+  border-radius:5px;padding:1px 4px;white-space:nowrap}
+
+.wrap{width:100%;max-width:1180px;margin:0 auto;padding:0 clamp(1.1rem,3.5vw,2.6rem)}
+h1,h2,h3{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;line-height:1.08;letter-spacing:.01em}
+h2{font-size:clamp(1.75rem,4vw,2.9rem)}
+h3{font-size:1.22rem;line-height:1.25}
+p{max-width:70ch}
+section{padding:clamp(60px,7vw,96px) 0;scroll-margin-top:66px}
+section.alt{background:var(--paper);border-top:3px solid var(--ink);border-bottom:3px solid var(--ink)}
+
+/* ---------- shared bits ---------- */
+.label{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:700;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.section-head{margin-bottom:clamp(30px,4vw,46px)}
+.section-intro{color:var(--muted);margin-top:14px;max-width:72ch}
+.chip{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;background:var(--ink);color:var(--cream);
+  border-radius:999px;padding:7px 16px}
+
+.btn{display:inline-block;font-family:'Baloo 2',sans-serif;font-weight:700;font-size:1rem;
+  text-decoration:none;color:var(--ink);background:var(--paper);
+  border:3px solid var(--ink);border-radius:14px;padding:11px 24px 9px;
+  box-shadow:5px 5px 0 var(--ink);transition:transform .12s ease,box-shadow .12s ease}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--ink)}
+.btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+.btn.go{background:var(--green)}
+.btn.cy{background:var(--cyan)}
+.cta-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:30px}
+
+/* ---------- nav ---------- */
+nav.topnav{position:sticky;top:0;z-index:100;background:var(--paper);border-bottom:3px solid var(--ink)}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:13px 0}
+.logo{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.3rem;letter-spacing:.02em;text-decoration:none}
+.logo span{color:#e6007e}
+.navlinks{display:flex;flex-wrap:wrap;gap:18px}
+.navlinks a{color:var(--muted);text-decoration:none;font-size:.87rem;font-weight:600}
+.navlinks a:hover{color:var(--ink);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+@media(max-width:640px){.navlinks{gap:12px}.navlinks a{font-size:.79rem}}
+
+/* ---------- hero: the yellow band ---------- */
+.hero{background:var(--yellow);border-bottom:3px solid var(--ink);
+  padding:clamp(48px,6vw,78px) 0 clamp(56px,7vw,88px)}
+.hero h1{font-size:clamp(2.2rem,6.2vw,4.5rem);margin:20px 0 0;max-width:19ch}
+.hero-sub{margin-top:20px;font-size:clamp(1rem,1.6vw,1.16rem);max-width:60ch;font-weight:500}
+.hero-trust{margin-top:26px;font-family:'JetBrains Mono',monospace;font-size:.71rem;font-weight:700;
+  letter-spacing:.13em;text-transform:uppercase;max-width:none}
+
+/* ---------- the board strip ---------- */
+.boardwrap{margin-top:-34px;position:relative;z-index:5}
+.board{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+@media(max-width:1000px){.board{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.board{grid-template-columns:repeat(2,1fr)}}
+.bt{background:var(--paper);border:3px solid var(--ink);border-radius:14px;overflow:hidden;
+  box-shadow:6px 6px 0 var(--accent);transition:transform .15s ease,box-shadow .15s ease}
+.bt:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--accent)}
+.bt .cat{background:var(--accent);border-bottom:3px solid var(--ink);padding:6px 10px 4px;
+  font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;text-align:center}
+.bt .val{display:block;font-family:'Baloo 2',sans-serif;font-weight:800;
+  font-size:clamp(1.5rem,3.1vw,2.3rem);line-height:1;padding:18px 8px 4px;text-align:center}
+.bt small{display:block;padding:0 10px 16px;text-align:center;color:var(--muted);
+  font-size:.74rem;line-height:1.35}
+
+/* ---------- cards ---------- */
+.tt-card{background:var(--paper);border:3px solid var(--ink);border-radius:20px;padding:26px 26px 24px;
+  box-shadow:8px 8px 0 var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,3vw,34px)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(18px,2.4vw,26px)}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}}
+.tt-card h3{margin-bottom:8px}
+.tt-card p{font-size:.95rem;color:var(--muted)}
+.tt-card p+p{margin-top:12px}
+.tt-card b{color:var(--ink)}
+
+/* ---------- about ---------- */
+.about-grid{display:grid;grid-template-columns:1.3fr .7fr;gap:clamp(26px,4vw,50px);align-items:start}
+@media(max-width:900px){.about-grid{grid-template-columns:1fr}}
+.about-text p+p{margin-top:16px}
+.profile{text-align:center}
+.avatar{width:140px;height:140px;border-radius:50%;margin:0 auto 18px;overflow:hidden;position:relative;
+  border:3px solid var(--ink);background:var(--cyan);display:grid;place-items:center}
+.avatar img{width:100%;height:100%;object-fit:cover;position:relative;z-index:2}
+.avatar .mono{position:absolute;inset:0;display:grid;place-items:center;z-index:1;
+  font-family:'Baloo 2',sans-serif;font-weight:800;font-size:2.6rem}
+.avatar img+.mono{display:none}
+.pname{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.3rem}
+.prole{font-size:.92rem;font-weight:600;margin-top:2px}
+.ploc{color:var(--muted);font-size:.86rem}
+.pfacts{list-style:none;margin-top:20px;padding-top:18px;border-top:3px solid var(--ink);
+  text-align:left;display:grid;gap:13px}
+.pfacts li{font-size:.86rem;color:var(--muted)}
+.pfacts b{display:block;font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink);margin-bottom:2px}
+
+/* ---------- stack ---------- */
+.stack{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.stack span{font-family:'JetBrains Mono',monospace;font-size:.71rem;font-weight:500;
+  border:2px solid var(--ink);border-radius:8px;padding:5px 10px;background:var(--paper)}
+
+/* ---------- figures ---------- */
+.shots{display:grid;gap:clamp(22px,3vw,32px)}
+.figure{background:var(--paper);border:3px solid var(--ink);border-radius:18px;overflow:hidden;
+  box-shadow:8px 8px 0 var(--accent)}
+.figure img{width:100%;height:auto;border-bottom:3px solid var(--ink)}
+.figure figcaption{padding:16px 20px 18px;color:var(--muted);font-size:.9rem;max-width:none}
+.figure figcaption b{color:var(--ink)}
+.figure.pad img{padding:14px;background:var(--cream)}
+
+/* ---------- numbered list ---------- */
+.steps{list-style:none;display:grid;gap:18px}
+.steps li{display:flex;gap:16px;align-items:flex-start}
+.num{flex:none;width:38px;height:38px;border:3px solid var(--ink);border-radius:12px;
+  display:grid;place-items:center;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1.05rem;
+  background:var(--accent);box-shadow:3px 3px 0 var(--ink)}
+.steps .t{font-family:'Baloo 2',sans-serif;font-weight:700;font-size:1.1rem;line-height:1.3}
+.steps .d{color:var(--muted);font-size:.93rem;margin-top:3px}
+
+/* ---------- links list ---------- */
+.deliv{display:grid;gap:14px}
+.deliv a.item{display:flex;justify-content:space-between;align-items:center;gap:18px;text-decoration:none;
+  background:var(--paper);border:3px solid var(--ink);border-radius:14px;padding:18px 22px;
+  box-shadow:5px 5px 0 var(--accent);transition:transform .12s ease,box-shadow .12s ease}
+.deliv a.item:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--accent)}
+.deliv .t{font-family:'Baloo 2',sans-serif;font-weight:700;font-size:1.05rem}
+.deliv .d{color:var(--muted);font-size:.86rem;max-width:none}
+.deliv .go{font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:700;white-space:nowrap}
+.note{border:3px solid var(--ink);border-left-width:10px;border-radius:0 12px 12px 0;
+  background:var(--band);padding:14px 18px;font-size:.9rem;margin-top:22px;max-width:none}
+
+/* ---------- contact + footer ---------- */
+.contact-inner{text-align:center}
+.contact-inner p{margin:0 auto}
+.contact-inner .cta-row{justify-content:center}
+footer{background:var(--ink);color:var(--cream);padding:40px 0 54px;font-size:.9rem}
+footer a{color:var(--yellow)}
+footer .links{display:flex;gap:20px;flex-wrap:wrap;margin-top:10px}
+footer .fine{margin-top:14px;font-size:.8rem;opacity:.7}
+
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<nav class="topnav" aria-label="Main">
+  <div class="wrap topbar">
+    <a class="logo" href="#top">TACO<span>TRIVIA</span></a>
+    <div class="navlinks">
+      <a href="#about">About</a><a href="#case">Case study</a><a href="#action">In action</a>
+      <a href="#special">Special Cards</a><a href="#engineering">Engineering</a>
+      <a href="#results">Results</a><a href="#contact">Contact</a>
+    </div>
+  </div>
+</nav>
+
+<main id="top">
+
+  <header class="hero">
+    <div class="wrap">
+      <span class="chip">Web developer · Educator · Seoul</span>
+      <h1>I built the quiz game my classroom actually needed.</h1>
+      <p class="hero-sub">Taco Trivia is a projector-first trivia platform for ESL teachers. One teacher, one screen, teams shouting answers at each other — and not a single student device. Designed, built, secured and deployed by one developer: me.</p>
+      <div class="cta-row">
+        <a class="btn go" href="https://taco-trivia-beige.vercel.app" rel="noopener">See it live</a>
+        <a class="btn" href="#case">Read the case study</a>
+      </div>
+      <p class="hero-trust">10 games · 368 questions · 60 categories · Zero student logins</p>
+    </div>
+  </header>
+
+  <div class="wrap boardwrap">
+    <div class="board" role="group" aria-label="Project at a glance, laid out as a Taco Trivia game board">
+      <div class="bt" style="--accent:var(--cyan)">
+        <div class="cat">Content</div><b class="val">10</b><small>authored games, 5–8 columns wide</small>
+      </div>
+      <div class="bt" style="--accent:var(--orange)">
+        <div class="cat">Questions</div><b class="val">368</b><small>across 60 categories</small>
+      </div>
+      <div class="bt" style="--accent:var(--pink)">
+        <div class="cat">Devices</div><b class="val">0</b><small>student phones or logins needed</small>
+      </div>
+      <div class="bt" style="--accent:var(--green)">
+        <div class="cat">Security</div><b class="val">12</b><small>row-level security policies</small>
+      </div>
+      <div class="bt" style="--accent:var(--purple)">
+        <div class="cat">Billing</div><b class="val">$29.99</b><small>one-time lifetime pass, via Paddle</small>
+      </div>
+      <div class="bt" style="--accent:var(--blue)">
+        <div class="cat">Codebase</div><b class="val">4.5k</b><small>lines of TypeScript &amp; React</small>
+      </div>
+    </div>
+  </div>
+
+  <section id="about">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="label">About</p>
+        <h2>A teacher who learned to ship software</h2>
+      </div>
+      <div class="about-grid">
+        <div class="about-text">
+          <p>I teach English in Seoul, and I build the tools I wish my classroom had. Taco Trivia came out of the same weekly frustration every ESL teacher knows: a review lesson needs a game, building a good one takes an evening, and the ready-made platforms all want thirty students to take out thirty phones.</p>
+          <p>That last part is the whole design. Handing out devices costs five minutes, splits the room's attention, and turns a shared game into thirty private ones. So Taco Trivia has <b>no student client at all</b> — the teacher is the sole operator, the board is on the projector, and the students look at each other instead of at screens.</p>
+          <p>I designed it, wrote it, secured it, filled it with content and deployed it. Everything on this page is something I built, measured, or broke and fixed myself.</p>
+        </div>
+        <aside class="tt-card profile" style="--accent:var(--cyan)">
+          <div class="avatar">
+            <img src="assets/headshot.png" alt="Jacobus Barnard" onerror="this.remove()">
+            <span class="mono" aria-hidden="true">JB</span>
+          </div>
+          <div class="pname">Jacobus Barnard</div>
+          <div class="prole">Web developer &amp; educator</div>
+          <div class="ploc">Seoul, South Korea</div>
+          <ul class="pfacts">
+            <li><b>Focus</b>Classroom-first edtech built for a projector, not a phone</li>
+            <li><b>Core stack</b>Next.js, React, TypeScript, PostgreSQL, serverless</li>
+            <li><b>Also built</b>59 Seconds and Mango Mafia — same classroom, different games</li>
+          </ul>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section id="case" class="alt">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="label">Case study</p>
+        <h2>One screen, one referee, no devices</h2>
+        <p class="section-intro">How a recurring lesson-prep problem became a deployed, paywalled web application — and why the biggest architectural decision was something the app deliberately does <em>not</em> do.</p>
+      </div>
+
+      <div class="grid2">
+        <div class="tt-card" style="--accent:var(--orange)">
+          <h3>The problem</h3>
+          <p>Review lessons need a game. Building a good one takes an evening I don't have, and the existing platforms are built around student devices — which in a real classroom means five minutes of setup, thirty distractions, and a room full of kids staring down instead of at each other.</p>
+          <p>The generic content is the other half of it. My students want questions about Minecraft, K-pop, Pokémon and the food they actually eat, not stock trivia about the capital of Peru.</p>
+        </div>
+        <div class="tt-card" style="--accent:var(--green)">
+          <h3>The decision that shapes everything</h3>
+          <p><b>Host-controlled, with no multiplayer at all.</b> There is no student client, no realtime channel and no server-side game session. A live game lives entirely in the teacher's browser tab as a single <code>useReducer</code> store — teams, scores, played tiles and the phase machine.</p>
+          <p>That removes an entire category of work — sockets, lobbies, reconnects, session state, sync bugs — and it is why a game cannot collapse mid-lesson because the school Wi-Fi hiccupped. Games are stored as reusable templates and fetched once; nothing about a running game is ever persisted.</p>
+        </div>
+        <div class="tt-card" style="--accent:var(--purple)">
+          <h3>My role</h3>
+          <p>All of it: product decisions, UX, the Next.js frontend, the API routes, the PostgreSQL schema and row-level security model, the payment integration, the admin CMS, the content itself, and the deployment.</p>
+          <p>Including the unglamorous parts — finding and closing a privilege-escalation hole in my own schema, and re-measuring a layout after it failed on a classroom TV.</p>
+        </div>
+        <div class="tt-card" style="--accent:var(--blue)">
+          <h3>How it's built</h3>
+          <p>Next.js 16 (App Router) and React 19 on Vercel, with Supabase for PostgreSQL, auth and row-level security, and Paddle as merchant of record. Access control is enforced in two layers: RLS policies are the real boundary, middleware guards the admin routes.</p>
+          <p>Teachers never touch a database. A separate admin CMS builds the boards — categories, point tiers, tiles, media, cover art and difficulty level — so shipping a new game is content work, not a deploy.</p>
+          <div class="stack" aria-label="Technology stack">
+            <span>Next.js 16</span><span>React 19</span><span>TypeScript</span><span>Tailwind CSS v4</span>
+            <span>Supabase</span><span>PostgreSQL + RLS</span><span>Supabase Auth</span><span>Supabase Storage</span>
+            <span>Paddle Billing</span><span>Vercel</span><span>Playwright</span><span>Git / GitHub</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tt-card" style="--accent:var(--pink);margin-top:clamp(20px,3vw,34px)">
+        <h3>Why Paddle and not Stripe</h3>
+        <p>Stripe does not support payouts to Korea, where I live. Paddle does — and as merchant of record it also absorbs the cross-border VAT and tax compliance that a solo developer would otherwise carry personally. Entitlements are granted in exactly one place: a signature-verified <code>transaction.completed</code> webhook. Nothing else in the codebase can grant access.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="action">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="label">See it in action</p>
+        <h2>Designed to be read from the back row</h2>
+        <p class="section-intro">Every decision on these screens came out of a real lesson: type that scales with the screen, scores the teacher can reach without leaving the game, and nothing on the board that needs explaining.</p>
+      </div>
+      <div class="shots">
+        <figure class="figure" style="--accent:var(--cyan)">
+          <img src="assets/home-hero.webp" alt="The Taco Trivia homepage: a yellow hero band reading 'Pick a game. Press play.' above a row of outlined game cards with cover art, difficulty pills, category tags and a green Play now button." loading="lazy">
+          <figcaption><b>The library.</b> Games come first — the hero is a single band, not a full screen. Each card carries its own cover art, an ESL level, its category tags and a question count. Free games play instantly with no account; the rest sit behind the lifetime pass.</figcaption>
+        </figure>
+
+        <figure class="figure" style="--accent:var(--orange)">
+          <img src="assets/board.webp" alt="The Taco Trivia game board: six colour-coded category headers — Baseball, Minecraft, Food and Snacks, IQ, Cartoons, Random — above a grid of point tiles from 100 to 500, with three team score panels along the bottom." loading="lazy">
+          <figcaption><b>The board.</b> Boards run 5 to 8 columns wide. Category header type is <em>derived</em>, not fixed: the longest name on the board and the column count decide the largest size that still fits on one line, so a five-column game lands near 47px and an eight-column one shrinks instead of overflowing. The +/− buttons under each team automatically award the value of the tile just opened.</figcaption>
+        </figure>
+
+        <div class="grid2">
+          <figure class="figure" style="--accent:var(--green)">
+            <img src="assets/question.webp" alt="A question screen: a cyan pill reading 'Baseball · 100 pts', the question 'Who is he?' in large type, a photograph of a baseball player, and a green 'Reveal answer' button." loading="lazy">
+            <figcaption><b>The question.</b> Spacebar reveals, Escape goes back. An optional countdown timer flashes and beeps when it expires.</figcaption>
+          </figure>
+          <figure class="figure" style="--accent:var(--purple)">
+            <img src="assets/answer.webp" alt="The answer screen: the word ANSWER above the name 'Shohei Ohtani' in very large type, a photograph, the original question repeated underneath, and a 'Return to board' button." loading="lazy">
+            <figcaption><b>The answer.</b> The question is repeated underneath, because by the time the class has finished arguing, half of them have forgotten what was asked.</figcaption>
+          </figure>
+        </div>
+
+        <figure class="figure" style="--accent:var(--blue)">
+          <img src="assets/home-library.webp" alt="The full Taco Trivia game library: ten game cards in a grid, each with cover art, a difficulty pill, category tags, a question count and a coloured Play now button. Premium games show a padlock, free games show a FREE badge." loading="lazy">
+          <figcaption><b>Ten games, 368 questions.</b> Search matches a game by what is <em>inside</em> it, not just its title — a teacher typing "flags" finds the game with a Flags column. Card accents cycle through six colours on purpose: the grid runs at up to five columns, and any palette whose length divides the column count paints every column one flat stripe.</figcaption>
+        </figure>
+
+        <div class="grid2">
+          <figure class="figure pad" style="--accent:var(--orange)">
+            <img src="assets/how-it-works.webp" alt="The How it works panel: four numbered steps for running a game, plus three ways teams can answer — Fast and Loud, Take Turns, and Quiet Mode." loading="lazy">
+            <figcaption><b>Three ways to answer, one screen.</b> Fast &amp; Loud, Take Turns and Quiet Mode are the three ways teachers already run a quiz — so the app names them instead of enforcing one.</figcaption>
+          </figure>
+          <figure class="figure pad" style="--accent:var(--green)">
+            <img src="assets/why-teachers.webp" alt="The 'Why teachers choose Taco Trivia' panel: saves prep time, fun up-to-date questions, and exclusive Special Cards." loading="lazy">
+            <figcaption><b>Written for the buyer.</b> The buyer is a tired teacher at 9pm looking for tomorrow's review lesson. The homepage answers that, not a feature list.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="special" class="alt">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="label">A feature I cut</p>
+        <h2>Special Cards: deleting the code, keeping the fun</h2>
+        <p class="section-intro">The most useful engineering decision in this project was removing a system I had already built.</p>
+      </div>
+      <div class="grid2">
+        <div class="tt-card" style="--accent:var(--yellow)">
+          <h3>What it was, and why it went</h3>
+          <p>Tiles could be flagged as chaos cards — steal, shield, switch, bomb — with a splash screen and a whole branch of game logic behind them.</p>
+          <p><b>The problem.</b> The splash screen only ever <em>described</em> the effect. The teacher still had to apply the score change by hand. I had built a rules engine that announced rules and enforced none of them.</p>
+          <p><b>What I did.</b> Deleted it. The effects branch, the splash route and the game-logic coupling all came out. The database columns stayed for backward compatibility, and nothing in gameplay reads them any more.</p>
+          <p><b>What replaced it.</b> The admin drops an ordinary-looking image onto any tile. When the class flips it, the teacher decides on the spot what happens and uses the score buttons that already exist. Same surprise, same laugh, none of the code.</p>
+          <p>It survives publicly as a single labelling flag that puts a "Special Cards" badge on a game card — because the thing that <em>sells</em> was never the state machine. It was the moment the class realises a tile is not a question.</p>
+        </div>
+        <div class="shots">
+          <figure class="figure" style="--accent:var(--purple)">
+            <img src="assets/special-card.webp" alt="A Special Card tile revealed: a purple pill reading 'Random · 400 pts', the title 'mystery box', and a large yellow question-mark box on a blue background." loading="lazy">
+            <figcaption><b>The class thinks it's a 400-point question.</b></figcaption>
+          </figure>
+          <figure class="figure" style="--accent:var(--pink)">
+            <img src="assets/special-card-reveal.webp" alt="The Special Card answer screen: 'Switch Points!' in large type above a cartoon character slamming a pink button labelled SWAP." loading="lazy">
+            <figcaption><b>It isn't.</b> The teacher swaps two teams' scores by hand and the room loses it. No engine required.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="engineering">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="label">Engineering</p>
+        <h2>Three problems worth writing down</h2>
+        <p class="section-intro">Each of these was found in production or in a real classroom, root-caused, and fixed with a rule that stops it coming back.</p>
+      </div>
+      <div class="grid3">
+        <div class="tt-card" style="--accent:var(--pink)">
+          <h3>1. My own schema let users promote themselves</h3>
+          <p><b>The hole.</b> An RLS <code>using</code> clause scopes <em>rows</em>, not <em>columns</em>. My "users can update their own profile" policy was row-correct and column-blind — so any signed-up user could call the public REST endpoint with the anon key, patch their own row, and set <code>role = 'admin'</code> or <code>has_all_access = true</code>. Every paid game, free, from a browser console.</p>
+          <p><b>The fix, in three layers.</b> Column-level grants so authenticated users may write only their email; the row policy re-created with a <code>with check</code>; and a <code>before update</code> trigger that reverts the privilege columns whenever the caller is anon or authenticated — the backstop for the day someone re-runs a blanket <code>grant</code> in the dashboard.</p>
+          <p><b>Verified live.</b> The patch now returns <code>42501</code> on the privilege columns, email still updates, and the payment webhook's grant path still works.</p>
+        </div>
+        <div class="tt-card" style="--accent:var(--cyan)">
+          <h3>2. The paywalled games advertised "0 questions"</h3>
+          <p><b>The bug.</b> The public library derived each card's question count from an embedded <code>questions</code> select. RLS filtered that embed exactly as designed — premium questions are invisible without the pass — so every locked game reported zero questions on the page whose entire job was to sell it. The security model was working perfectly and quietly killing the funnel.</p>
+          <p><b>The fix.</b> The listing route now tallies counts with the service-role client into a dedicated field, while the gameplay route still enforces the paywall unchanged.</p>
+          <p><b>The rule that came out of it.</b> That listing route runs as service-role now, so it must never be extended to select question <em>content</em> — and a count must never again be derived from an array length on a listing response.</p>
+        </div>
+        <div class="tt-card" style="--accent:var(--orange)">
+          <h3>3. It fit on my monitor and broke on a classroom TV</h3>
+          <p><b>The report.</b> On a real classroom TV the team panels overlapped the board, and "Return to board" sat below the fold. On my 2560×1440 monitor everything was fine.</p>
+          <p><b>The cause.</b> One root cause for both: the projected screens were sized off the viewport's <em>width</em> while the thing running out was its <em>height</em>. A 16:9 TV window has a big monitor's width and far less height, so every width-derived size was correct on my desk and too tall in the room.</p>
+          <p><b>Measured, not guessed.</b> Reproduced with Playwright at five viewport sizes: the board overlapped by 49px, 129px and 97px at the three short ones, and not at all at 2560×1400. Three rules came out — cap type on <em>both</em> axes, make fractional grid rows <code>minmax(0,1fr)</code> so they can actually shrink, and give each screen exactly one flexible block that absorbs the leftover height.</p>
+        </div>
+      </div>
+
+      <div class="tt-card" style="--accent:var(--blue);margin-top:clamp(20px,3vw,30px)">
+        <h3>Smaller things only a real room teaches you</h3>
+        <ul class="steps" style="margin-top:16px">
+          <li><span class="num" style="--accent:var(--cyan)">1</span><div>
+            <div class="t">Neon category colours are invisible on white</div>
+            <div class="d">Category colours are free text the admin picks. A helper darkens any chosen colour stepwise until it clears WCAG AA against white, so a neon-yellow column is legible instead of blank.</div></div></li>
+          <li><span class="num" style="--accent:var(--green)">2</span><div>
+            <div class="t">Team names are learned after the board is up</div>
+            <div class="d">Teachers find out what the class wants to be called <em>during</em> the game, so names became click-to-edit on the board — which promptly exposed a pre-existing bug where pressing Escape to cancel an edit also left the game.</div></div></li>
+          <li><span class="num" style="--accent:var(--purple)">3</span><div>
+            <div class="t">Images arriving mid-sentence break the read</div>
+            <div class="d">Question text painted instantly and its picture landed seconds later, over the teacher's voice. The board now preloads every tile's media while the teacher is still choosing a tile.</div></div></li>
+          <li><span class="num" style="--accent:var(--orange)">4</span><div>
+            <div class="t">Played tiles stay clickable — on purpose</div>
+            <div class="d">A spent tile looks spent, but it still opens. Classes ask to see one again, and a locked tile serves the state machine rather than the room.</div></div></li>
+          <li><span class="num" style="--accent:var(--pink)">5</span><div>
+            <div class="t">Borrowed images disappear</div>
+            <div class="d">Pasted image URLs can be re-hosted into Supabase Storage in one click from the builder. All 411 media URLs in the live library are now self-hosted — no hotlinks left to rot.</div></div></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="results" class="alt">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="label">Where it stands</p>
+        <h2>Built, deployed, and played</h2>
+        <p class="section-intro">Every number here comes from the live database or the codebase, not an estimate.</p>
+      </div>
+      <div class="board">
+        <div class="bt" style="--accent:var(--cyan)"><div class="cat">Games</div><b class="val">10</b><small>4 free · 6 premium</small></div>
+        <div class="bt" style="--accent:var(--orange)"><div class="cat">Questions</div><b class="val">368</b><small>authored, not generated</small></div>
+        <div class="bt" style="--accent:var(--green)"><div class="cat">Categories</div><b class="val">60</b><small>boards 5–8 columns wide</small></div>
+        <div class="bt" style="--accent:var(--purple)"><div class="cat">Media</div><b class="val">411</b><small>images, all self-hosted</small></div>
+        <div class="bt" style="--accent:var(--blue)"><div class="cat">Migrations</div><b class="val">8</b><small>versioned schema changes</small></div>
+        <div class="bt" style="--accent:var(--pink)"><div class="cat">Policies</div><b class="val">12</b><small>row-level security rules</small></div>
+      </div>
+
+      <div class="grid2" style="margin-top:clamp(20px,3vw,32px)">
+        <div class="tt-card" style="--accent:var(--green)">
+          <h3>What's live</h3>
+          <p>Deployed on Vercel and playable now. Free games run start to finish with no account at all — that is the teacher's test drive, and it is deliberately a whole game rather than a demo.</p>
+          <p>The full purchase loop — paywall, overlay checkout, signed webhook, entitlement granted — has been verified end to end in Paddle's sandbox.</p>
+        </div>
+        <div class="tt-card" style="--accent:var(--orange)">
+          <h3>What's next</h3>
+          <p><b>Going live on payments.</b> Paddle is still in sandbox, so the site cannot take real money yet. That needs a production account, domain approval and a new set of credentials — deliberately the last step, after the product was worth charging for.</p>
+          <p><b>Merging into Class Cookies.</b> Taco Trivia is being folded into a single subscription platform alongside two sibling classroom games, so one subscription gives a teacher everything.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="docs">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="label">Links</p>
+        <h2>Go and look at it</h2>
+      </div>
+      <div class="deliv">
+        <a class="item" style="--accent:var(--green)" href="https://taco-trivia-beige.vercel.app" rel="noopener">
+          <div><div class="t">Live application</div><div class="d">Pick a free game and play it — no account, no install, nothing to set up.</div></div>
+          <span class="go">Play →</span>
+        </a>
+        <a class="item" style="--accent:var(--orange)" href="https://jarfis-ai.github.io/mango-mafia/" rel="noopener">
+          <div><div class="t">Mango Mafia — case study</div><div class="d">Mafia for an ESL classroom, where the app holds every secret on a screen twenty players are watching.</div></div>
+          <span class="go">Read →</span>
+        </a>
+        <a class="item" style="--accent:var(--cyan)" href="https://jarfis-ai.github.io/" rel="noopener">
+          <div><div class="t">59 Seconds — case study</div><div class="d">A projector-first ESL speaking game: one card, five words, sixty seconds.</div></div>
+          <span class="go">Read →</span>
+        </a>
+        <a class="item" style="--accent:var(--purple)" href="https://github.com/JarFis-ai" rel="noopener">
+          <div><div class="t">GitHub</div><div class="d">Other projects and case studies.</div></div>
+          <span class="go">Visit →</span>
+        </a>
+      </div>
+      <p class="note">The application source is private — Taco Trivia is a commercial product with paid content. This repository holds the case study and screenshots; code excerpts are available on request.</p>
+    </div>
+  </section>
+
+  <section id="contact" class="alt">
+    <div class="wrap contact-inner">
+      <div class="section-head">
+        <p class="label">Contact</p>
+        <h2>Get in touch</h2>
+      </div>
+      <p>I'm a teacher and developer in Seoul who builds classroom software that runs on the equipment schools actually have. If you'd like to talk about Taco Trivia, edtech, or working together:</p>
+      <div class="cta-row">
+        <a class="btn cy" href="mailto:jaco.barnard1@gmail.com">Email me</a>
+        <a class="btn" href="https://github.com/JarFis-ai" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>© 2026 Jacobus Barnard · Taco Trivia</div>
+    <div class="links">
+      <a href="https://taco-trivia-beige.vercel.app" rel="noopener">Live app</a>
+      <a href="https://jarfis-ai.github.io/mango-mafia/" rel="noopener">Mango Mafia</a>
+      <a href="https://jarfis-ai.github.io/" rel="noopener">59 Seconds</a>
+    </div>
+    <div class="fine">Built with Next.js, Supabase and Paddle. Screenshots are from the live application.</div>
+  </div>
+</footer>
+
+</body>
+</html>
